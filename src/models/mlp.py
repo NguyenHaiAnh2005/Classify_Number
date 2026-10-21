@@ -1,6 +1,5 @@
 import copy
 import time
-
 import torch
 import torch.nn as nn
 
@@ -9,7 +8,6 @@ torch.set_grad_enabled(False)
 
 SEED = 42
 ACTIVATIONS = {"relu": nn.ReLU, "sigmoid": nn.Sigmoid, "tanh": nn.Tanh}
-
 
 # =========================================================
 # 1. XÂY DỰNG MẠNG
@@ -161,33 +159,6 @@ class SGDMomentum:
 # =========================================================
 # 6. LỚP MLP
 # =========================================================
-
-
-def relu(z):
-    return np.maximum(0, z)
-
-
-def softmax(z):
-    z = z - np.max(z, axis=1, keepdims=True)
-    e_z = np.exp(z)
-    return e_z / np.sum(e_z, axis=1, keepdims=True)
-
-
-def cross_entropy(logits, y):
-    N = len(y)
-
-    z = logits - np.max(logits, axis=1, keepdims=True)
-    log_sum_exp = np.log(
-        np.sum(np.exp(z), axis=1, keepdims=True)
-    )
-    log_probs = z - log_sum_exp
-
-    return -np.mean(log_probs[np.arange(N), y])
-
-
-# =========================
-# 3. MLP
-# =========================
 
 class MLP:
     def __init__(self, sizes, activation="relu", p_drop=0.0, init="he",
