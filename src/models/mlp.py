@@ -1,5 +1,5 @@
 import copy
-import time
+
 import torch
 import torch.nn as nn
 
@@ -8,6 +8,7 @@ torch.set_grad_enabled(False)
 
 SEED = 42
 ACTIVATIONS = {"relu": nn.ReLU, "sigmoid": nn.Sigmoid, "tanh": nn.Tanh}
+
 
 # =========================================================
 # 1. XÂY DỰNG MẠNG
@@ -139,7 +140,6 @@ def backward(cache, grad_out, weight_decay=0.0):
 # =========================================================
 
 class SGDMomentum:
-    """Delta_w = alpha * Delta_w - gamma * g ;  w += Delta_w."""
 
     def __init__(self, params, lr, momentum=0.0):
         self.params = list(params)
@@ -155,10 +155,6 @@ class SGDMomentum:
         for p in self.params:
             p.grad = None
 
-
-# =========================================================
-# 6. LỚP MLP
-# =========================================================
 
 class MLP:
     def __init__(self, sizes, activation="relu", p_drop=0.0, init="he",
@@ -197,7 +193,6 @@ class MLP:
         return total / count
 
     def evaluate(self, X, y, batch_size=5000):
-        """(cross-entropy trung bình, accuracy), dropout tắt."""
         total, correct = 0.0, 0
         for s in range(0, len(X), batch_size):
             logits, _ = self.forward_with_cache(X[s:s + batch_size], train=False)
@@ -231,22 +226,18 @@ class MLP:
 
         torch.manual_seed(seed)
         opt = SGDMomentum(self.parameters(), lr, momentum)
-        hist = {k: [] for k in ["train_loss", "train_acc", "val_loss", "val_acc", "time"]}
+        hist = {k: [] for k in ["train_loss", "train_acc", "val_loss", "val_acc"]}
 
         best_loss, best_state, bad = float("inf"), None, 0
         self.best_epoch_ = None
 
         for ep in range(1, epochs + 1):
-            t0 = time.time()
             self.train_one_epoch(X, y, opt, batch_size, weight_decay)
-            dt = time.time() - t0
 
-            # đo lại với dropout tắt để so sánh công bằng với validation
             tl, ta = self.evaluate(X, y)
             hist["train_loss"].append(tl)
             hist["train_acc"].append(ta)
-            hist["time"].append(dt)
-            msg = f"Epoch {ep:02d}/{epochs:02d} | {dt:5.1f}s | train loss {tl:.4f} acc {ta:.4f}"
+            msg = f"Epoch {ep:02d}/{epochs:02d} | train loss {tl:.4f} acc {ta:.4f}"
 
             if validation_data is not None:
                 vl, va = self.evaluate(X_val, y_val)
@@ -293,6 +284,5 @@ class MLP:
     def predict(self, X, batch_size=5000):
         return self.predict_logits(X, batch_size).argmax(dim=1)
 
-    
 
 
