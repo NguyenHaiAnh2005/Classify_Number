@@ -1,5 +1,5 @@
 """
-image_processing.py - Xử lý ảnh MNIST: làm sạch và tăng cường dữ liệu.
+image_preprocessing.py - Xử lý ảnh MNIST: làm sạch và tăng cường dữ liệu.
 
 Lưu ý: chỉ làm sạch tập TRAIN (trước khi chia validation).
 Không đụng vào tập test để kết quả đánh giá không bị thay đổi.

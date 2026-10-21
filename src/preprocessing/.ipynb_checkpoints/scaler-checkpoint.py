@@ -63,13 +63,14 @@ def scale_flat(X_train, X_val, X_test, mode="raw"):
     X_test = X_test.reshape(len(X_test), -1) / 255.0
 
     # Bỏ các pixel luôn bằng 0 trong train (pixel chết)
-    keep = X_train.max(axis=0) > 0
-    X_train = X_train[:, keep]
-    X_val = X_val[:, keep]
-    X_test = X_test[:, keep]
+    # keep = X_train.max(axis=0) > 0
+    # X_train = X_train[:, keep]
+    # X_val = X_val[:, keep]
+    # X_test = X_test[:, keep]
 
-    tools = {"keep_pixels": keep}
-
+    # tools = {"keep_pixels": keep}
+    
+    tools = {}
     if mode == "binary":
         X_train = (X_train >= 0.5).astype("float32")
         X_val = (X_val >= 0.5).astype("float32")
