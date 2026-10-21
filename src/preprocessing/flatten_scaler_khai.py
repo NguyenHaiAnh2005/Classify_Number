@@ -20,7 +20,7 @@ from sklearn.preprocessing import StandardScaler
 # Dung lai ham kiem tra o file kia de khong viet trung code.
 # Neu da chuyen vao package (src/preprocessing/), doi thanh:
 #     from .image_preprocessing import normalize_images, validate_images
-from image_preprocessing import normalize_images, validate_images
+from src.preprocessing.image_preprocessing import normalize_images, validate_images
 
 # ----- Hang so -----
 VALID_MODES = ("raw", "standard", "binary")  # cac che do tien xu ly hop le
