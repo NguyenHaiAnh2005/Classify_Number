@@ -33,11 +33,16 @@ def remove_duplicates(X, y):
 
 
 def remove_blank_images(X, y):
+    if len(X) == 0:
+        print('len(X) = 0 khong hop le')
+        return None
+    
     """Bỏ các ảnh trống (toàn pixel 0)."""
     keep = X.reshape(len(X), -1).max(axis=1) > 0
     return X[keep], y[keep]
 
 
+# call two function above
 def clean_images(X, y):
     """Làm sạch tập train: bỏ ảnh trống rồi bỏ ảnh trùng. In ra số ảnh đã bỏ."""
     n0 = len(X)

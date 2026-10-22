@@ -42,6 +42,13 @@ def scale_cnn(X_train, X_val, X_test, channels_last=True):
     mean = X_train.mean()
     std = X_train.std()
 
+    # Constant or invalid training data cannot be standardized.
+    if not np.isfinite(mean) or not np.isfinite(std):
+        raise ValueError("Training data contains invalid normalization statistics.")
+
+    if std <= 0:
+        raise ValueError("Training data must have a non-zero standard deviation.")
+    
     out = []
     for X in (X_train, X_val, X_test):
         X = (X - mean) / std
@@ -58,6 +65,15 @@ def scale_cnn(X_train, X_val, X_test, channels_last=True):
 # Mô hình cổ điển: flatten thành vector
 # ---------------------------------------------------------------- #
 def scale_flat(X_train, X_val, X_test, mode="raw"):
+
+    # Flat preprocessing does not support CNN image layouts.
+    valid_modes = {"raw", "binary", "standard"}
+
+    if mode not in valid_modes:
+        raise ValueError(
+            f"Unknown mode: {mode!r}. Expected one of {sorted(valid_modes)}."
+        )
+
     X_train = X_train.reshape(len(X_train), -1) / 255.0
     X_val = X_val.reshape(len(X_val), -1) / 255.0
     X_test = X_test.reshape(len(X_test), -1) / 255.0
@@ -92,6 +108,16 @@ def scale_flat(X_train, X_val, X_test, mode="raw"):
 # ---------------------------------------------------------------- #
 def iter_kfold(X, y, n_splits=5, seed=42, mode="raw"):
     """Yield các fold train/val đã qua tiền xử lý kiểu ``mode``."""
+
+    # Flat preprocessing does not support CNN image layouts.
+    valid_modes = {"raw", "binary", "standard"}
+
+    if mode not in valid_modes:
+        raise ValueError(
+            f"Unknown mode: {mode!r}. Expected one of {sorted(valid_modes)}."
+        )
+
+
     X = np.asarray(X)
     y = np.asarray(y)
 
@@ -128,6 +154,15 @@ def prepare(kind, X_train, y_train, X_test, y_test, val_size=0.1,
     augment: chỉ dùng cho "cnn", tăng cường train bằng ảnh dịch.
     Trả về dict: X_train, y_train, X_val, y_val, X_test, y_test, tools.
     """
+
+    # Reject unsupported preprocessing modes before splitting data.
+    valid_kinds = {"cnn", "raw", "binary", "standard"}
+
+    if kind not in valid_kinds:
+        raise ValueError(
+            f"Unknown kind: {kind!r}. Expected one of {sorted(valid_kinds)}."
+        )
+
     X_train, X_val, y_train, y_val = split_val(X_train, y_train, val_size)
 
     if kind == "cnn":
