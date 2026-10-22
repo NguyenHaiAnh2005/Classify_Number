@@ -103,6 +103,5 @@ class ClassificationMetrics:
             f"{m['macro_precision']:>10.3f} "
             f"{m['macro_recall']:>10.3f} "
             f"{m['macro_f1']:>10.3f} "
-            f"{m['support'].sum():>10d}"
         )
         print(f"\nAccuracy: {m['accuracy']:.3f}")
