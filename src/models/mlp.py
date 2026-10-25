@@ -18,12 +18,15 @@ def build_mlp(sizes, activation="relu", p_drop=0.0, init="he", const=0.01, seed=
     """sizes = [784, k_1, ..., 10]. Linear -> Act -> (Dropout) -> ... -> Linear."""
     if activation not in ACTIVATIONS:
         raise ValueError(f"activation phải thuộc {list(ACTIVATIONS)}")
+    
     if not 0 <= p_drop < 1:
         raise ValueError("p_drop phải thuộc [0, 1).")
 
     torch.manual_seed(seed)
+
     layers = []
     L = len(sizes) - 1
+    
     for l in range(L):
         lin = nn.Linear(sizes[l], sizes[l + 1])
         if init == "he":
@@ -43,6 +46,7 @@ def build_mlp(sizes, activation="relu", p_drop=0.0, init="he", const=0.01, seed=
     return nn.Sequential(*layers)
 
 
+# đếm các tham số của mô hình
 def n_params(model):
     return sum(p.numel() for p in model.parameters())
 
@@ -59,6 +63,7 @@ def forward_with_cache(model, X, train=True):
         a_in = a
         extra = None
         if isinstance(layer, nn.Dropout):
+            # only used dropout in train state
             if train and layer.p > 0:
                 M = (torch.rand_like(a_in) > layer.p).to(a_in.dtype)   # P(M=1) = 1-p
                 a = a_in * M / (1 - layer.p)                           # inverted dropout
@@ -202,7 +207,8 @@ class MLP:
         return total / len(X), correct / len(X)
 
     def _check_data(self, X, y):
-        X, y = X.float(), y.long()
+        X = torch.as_tensor(X, dtype=torch.float32)
+        y = torch.as_tensor(y).long()
         if X.ndim != 2 or X.shape[1] != self.sizes[0]:
             raise ValueError("Kích thước X không khớp với input layer.")
         if len(X) != len(y) or len(y) == 0:
@@ -273,7 +279,7 @@ class MLP:
 
     # ---------- dự đoán ----------
     def predict_logits(self, X, batch_size=5000):
-        X = X.float()
+        X = torch.as_tensor(X, dtype=torch.float32)
         out = [self.forward_with_cache(X[s:s + batch_size], train=False)[0]
                for s in range(0, len(X), batch_size)]
         return torch.cat(out, dim=0)

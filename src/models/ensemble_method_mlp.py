@@ -2,7 +2,6 @@ import torch
 
 from src.models.mlp import MLP
 
-
 class MLPEnsemble:
     """Train independent CPU MLPs and average their class probabilities."""
 
@@ -18,9 +17,7 @@ class MLPEnsemble:
         self.seeds = tuple(seeds)
 
         if len(self.sizes) < 2 or any(s <= 0 for s in self.sizes):
-            raise ValueError(
-                "sizes must contain positive input and output sizes."
-            )
+            raise ValueError("sizes must contain positive input and output sizes.")
 
         if len(self.seeds) < 2 or len(set(self.seeds)) != len(self.seeds):
             raise ValueError("Provide at least two distinct seeds.")
@@ -38,9 +35,7 @@ class MLPEnsemble:
         X = torch.as_tensor(X, dtype=torch.float32, device="cpu")
 
         if X.ndim != 2 or X.shape[1] != self.sizes[0] or len(X) == 0:
-            raise ValueError(
-                f"X must have shape (N, {self.sizes[0]}) with N > 0."
-            )
+            raise ValueError(f"X must have shape (N, {self.sizes[0]}) with N > 0.")
 
         if not torch.isfinite(X).all():
             raise ValueError("X must contain only finite values.")
@@ -50,16 +45,14 @@ class MLPEnsemble:
 
         y = torch.as_tensor(y, device="cpu")
 
-        if y.ndim != 1 or len(y) != len(X):
+        if y.ndim != 1 or len(y) != len(X): 
             raise ValueError("y must have shape (N,) and match X.")
 
         if not torch.isfinite(y).all() or not torch.equal(y, y.long()):
             raise ValueError("y must contain finite integer labels.")
 
         if (y < 0).any() or (y >= self.sizes[-1]).any():
-            raise ValueError(
-                "Labels must be in [0, number_of_classes - 1]."
-            )
+            raise ValueError("Labels must be in [0, number_of_classes - 1].")
 
         return X, y.long()
 
@@ -173,8 +166,9 @@ class MLPEnsemble:
 
         for model in self.models_:
             # Average probabilities, not logits, weights, or labels.
-            # Accumulation avoids storing every member's output together.
+            # Accumulation probabilities.
             probabilities.add_(
+                # call the predict_proba of MLP class
                 model.predict_proba(X, batch_size=batch_size)
             )
 
@@ -206,21 +200,19 @@ class MLPEnsemble:
     @torch.no_grad()
     def evaluate_members(self, X, y, batch_size=5000):
         """Compare each trained member against the ensemble."""
+
+        # call the self.evaluate() function of MLPEnsemble class, defined above
         loss, accuracy = self.evaluate(X, y, batch_size=batch_size)
         X, y = self._check_data(X, y)
 
         results = []
 
-        for index, (seed, model) in enumerate(
-            zip(self.seeds, self.models_),
-            start=1,
-        ):
-            member_loss, member_accuracy = model.evaluate(
-                X,
-                y,
-                batch_size=batch_size,
-            )
+        for index, (seed, model) in enumerate(zip(self.seeds, self.models_), start=1):
 
+            # call the model.evaluate() function of MLP class
+            member_loss, member_accuracy = model.evaluate(X, y, batch_size=batch_size)
+
+            # save each model
             results.append({
                 "model": f"MLP {index}",
                 "seed": seed,
