@@ -88,7 +88,7 @@ class ClassificationMetrics:
         m = self.evaluate()
 
         print(f"{'Class':>10} {'Precision':>10} {'Recall':>10} "
-              f"{'F1':>10} {'Support':>10}")
+              f"{'F1':>10}")
 
         for i, label in enumerate(self.labels):
             print(
