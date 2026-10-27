@@ -43,7 +43,7 @@ class ClassificationMetrics:
                     (y_true == actual) & (y_pred == predicted)
                 )
     def get_confustion_matrix(self):
-        return self.cm
+        return self.cm, self.labels
 
     def evaluate(self):
         tp = np.diag(self.cm)
