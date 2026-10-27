@@ -42,6 +42,8 @@ class ClassificationMetrics:
                 self.cm[i, j] = np.sum(
                     (y_true == actual) & (y_pred == predicted)
                 )
+    def get_confustion_matrix(self):
+        return self.cm
 
     def evaluate(self):
         tp = np.diag(self.cm)
