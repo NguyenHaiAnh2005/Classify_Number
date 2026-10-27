@@ -74,9 +74,9 @@ def scale_flat(X_train, X_val, X_test, mode="raw"):
             f"Unknown mode: {mode!r}. Expected one of {sorted(valid_modes)}."
         )
 
-    X_train = X_train.reshape(len(X_train), -1) / 255.0
-    X_val = X_val.reshape(len(X_val), -1) / 255.0
-    X_test = X_test.reshape(len(X_test), -1) / 255.0
+    X_train_ = X_train.reshape(len(X_train), -1) / 255.0
+    X_val_ = X_val.reshape(len(X_val), -1) / 255.0
+    X_test_ = X_test.reshape(len(X_test), -1) / 255.0
 
     # Bỏ các pixel luôn bằng 0 trong train (pixel chết)
     # keep = X_train.max(axis=0) > 0
@@ -88,19 +88,19 @@ def scale_flat(X_train, X_val, X_test, mode="raw"):
     
     tools = {}
     if mode == "binary":
-        X_train = (X_train >= 0.5).astype("float32")
-        X_val = (X_val >= 0.5).astype("float32")
-        X_test = (X_test >= 0.5).astype("float32")
+        X_train_ = (X_train_ >= 0.5).astype("float32")
+        X_val_ = (X_val_ >= 0.5).astype("float32")
+        X_test_ = (X_test_ >= 0.5).astype("float32")
 
     elif mode == "standard":
         scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_val = scaler.transform(X_val)
-        X_test = scaler.transform(X_test)
+        X_train_ = scaler.fit_transform(X_train_)
+        X_val_ = scaler.transform(X_val_)
+        X_test_ = scaler.transform(X_test_)
         tools["scaler"] = scaler
 
-    return (X_train.astype("float32"), X_val.astype("float32"),
-            X_test.astype("float32"), tools)
+    return (X_train_.astype("float32"), X_val_.astype("float32"),
+            X_test_.astype("float32"), tools)
 
 
 # ---------------------------------------------------------------- #

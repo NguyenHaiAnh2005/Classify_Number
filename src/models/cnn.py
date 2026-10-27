@@ -205,6 +205,32 @@ class CNN:
         for p in self.parameters():
             p.data = p.data.to(self.device)
         return self
+    
+    def predict_proba(self, x):
+        
+        dtype = self.parameters()[0].data.dtype
+        x = torch.as_tensor(x, dtype=dtype, device=self.device)
+
+        if x.ndim == 2:
+            x = x.unsqueeze(0).unsqueeze(0)
+        elif x.ndim == 3:
+            x = x.unsqueeze(0)
+
+        if x.ndim != 4 or tuple(x.shape[1:]) != (1, 28, 28):
+            raise ValueError("Invalid image shape")
+
+        self.eval()
+
+        with torch.no_grad():
+            logits = self.forward(x)
+            probs = torch.softmax(logits, dim=1)
+
+        return probs
+
+
+    def predict(self, x):
+        probs = self.predict_proba(x)
+        return probs.argmax(dim=1)
 
 
 class Adam:
