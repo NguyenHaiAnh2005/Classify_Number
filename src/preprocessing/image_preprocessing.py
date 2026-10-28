@@ -8,13 +8,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 
-def convert_image(image_path, invert=False):
-    """Đọc ảnh và chuyển thành ảnh grayscale MNIST (28x28, pixel 0-255)."""
-    with Image.open(image_path) as image:
-        image = image.convert("L").resize((28, 28), Image.Resampling.LANCZOS)
-        if invert:
-            image = ImageOps.invert(image)
-        return np.asarray(image, dtype=np.uint8).copy()
+
 
 
 def remove_duplicates(X, y):
