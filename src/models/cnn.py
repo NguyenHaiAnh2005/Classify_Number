@@ -211,7 +211,6 @@ def main():
     end_time = time.perf_counter()
     time_cnn_train = end_time - start_time
 
-    save_weights(model) # save model
     plot_history(history)
 
     # Dùng mô hình ở epoch cuối; chỉ đánh giá test sau khi huấn luyện xong.
@@ -219,6 +218,6 @@ def main():
     print(f"Test loss: {result['loss']:.4f} | Test accuracy: {result['accuracy']:.4f}")
     plot_results(test_data, result)
 
-    return time_cnn_train
+    return (time_cnn_train, model)
 if __name__ == '__main__':
     main()
