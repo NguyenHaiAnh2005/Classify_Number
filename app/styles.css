@@ -1,0 +1,358 @@
+/* Nền midnight, điểm nhấn lime và các thẻ có viền mảnh. */
+
+.stApp {
+    background: #090c12;
+    color: #edf0f5;
+    color-scheme: dark;
+    font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+[data-testid="stMainBlockContainer"] {
+    max-width: 1160px;
+    padding: 2.4rem 2.5rem 2rem;
+}
+
+.topbar,
+.brand,
+.footer {
+    display: flex;
+    align-items: center;
+}
+
+.topbar {
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #252a34;
+}
+
+.brand {
+    gap: 12px;
+    font-size: 17px;
+    font-weight: 750;
+    letter-spacing: 2px;
+}
+
+.status-pill,
+.small-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid #303b29;
+    border-radius: 50px;
+    color: #c4f17c;
+    background: #151d12;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-pill i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #c4f17c;
+    box-shadow: 0 0 9px #c4f17c60;
+}
+
+.eyebrow {
+    color: #a6afbe;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 2px;
+}
+
+.st-key-model_toolbar,
+.st-key-input_panel,
+.st-key-result_panel {
+    padding: 22px !important;
+    border: 1px solid #282f3b !important;
+    border-radius: 17px !important;
+    background: #11151d;
+}
+
+.st-key-model_toolbar {
+    margin-bottom: 12px;
+}
+
+.panel-label {
+    margin: 1px 0 16px;
+    color: #c4f17c;
+}
+
+.stApp label,
+.stApp label p,
+.stApp h3,
+.stApp strong {
+    color: #edf0f5;
+}
+
+.stApp [data-testid="stCaptionContainer"] p {
+    color: #a6afbe;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.stApp [data-baseweb="select"] > div {
+    border: 1px solid #394252;
+    border-radius: 10px;
+    background: #191f2a;
+    color: #edf0f5;
+}
+
+.stApp [data-baseweb="select"] span,
+.stApp [data-baseweb="select"] input {
+    color: #edf0f5;
+}
+
+.stApp [data-baseweb="select"] svg {
+    fill: #c4f17c;
+}
+
+.stApp [data-testid="stRadio"] label {
+    padding: 6px 4px;
+    font-size: 12px;
+}
+
+.stApp button[kind="secondary"],
+.stApp [data-testid="stDownloadButton"] button {
+    border: 1px solid #394252;
+    border-radius: 10px;
+    background: #191f2a;
+    color: #e3e9f1;
+}
+
+.stApp button[kind="primary"] {
+    margin-top: 8px;
+    min-height: 48px;
+    border: 1px solid #c4f17c;
+    border-radius: 10px;
+    background: #c4f17c;
+    color: #141b0d;
+    font-weight: 700;
+}
+
+.stApp button[kind="primary"] p {
+    color: #141b0d;
+}
+
+.stApp button[kind="primary"]:hover {
+    background: #d5ff93;
+}
+
+.stApp button[kind="secondary"]:hover {
+    border-color: #c4f17c;
+}
+
+.stApp button:focus-visible {
+    outline: 2px solid #c4f17c;
+}
+
+.stApp [data-testid="stExpander"] details {
+    border-color: #303847;
+    border-radius: 12px;
+    background: #11151d;
+    color: #edf0f5;
+}
+
+.stApp [data-testid="stExpander"] summary {
+    color: #dce3ee;
+}
+
+.stApp [data-testid="stCode"] pre {
+    background: #191f2a;
+}
+
+.empty-result {
+    min-height: 475px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.empty-digit {
+    color: #323f2b;
+    font-size: 126px;
+    font-weight: 650;
+    line-height: 1.25;
+    text-shadow: 0 0 70px #c4f17c18;
+}
+
+.empty-result h3 {
+    font-size: 20px;
+    letter-spacing: -0.5px;
+}
+
+.empty-result p {
+    color: #a6afbe;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.empty-result .small-pill {
+    margin-top: 14px;
+}
+
+.prediction-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding: 0 14px;
+}
+
+.muted {
+    color: #a6afbe;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.prediction-digit {
+    color: #c4f17c;
+    font-size: 122px;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -7px;
+}
+
+.prediction-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.confidence {
+    color: #edf0f5;
+    font-size: 34px;
+    letter-spacing: -1.5px;
+}
+
+.probability-chart {
+    padding: 5px 0 10px;
+}
+
+.probability-row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin: 10px 0;
+    color: #a6afbe;
+    font-size: 11px;
+}
+
+.digit-label {
+    width: 13px;
+    text-align: center;
+}
+
+.probability-track {
+    flex: 1;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 5px;
+    background: #232a36;
+}
+
+.probability-track > div {
+    height: 100%;
+    border-radius: 5px;
+    background: #68788a;
+}
+
+.probability-value {
+    width: 47px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.probability-row.active {
+    color: #c4f17c;
+    font-weight: 650;
+}
+
+.probability-row.active .probability-track > div {
+    background: #c4f17c;
+}
+
+.workflow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding: 30px 5px 22px;
+}
+
+.workflow span {
+    margin-right: 12px;
+    color: #c4f17c;
+    font-size: 11px;
+}
+
+.workflow strong {
+    font-size: 13px;
+    font-weight: 550;
+}
+
+.workflow p {
+    margin: 9px 0 0 28px;
+    color: #a6afbe;
+    font-size: 11px;
+}
+
+.footer {
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 36px;
+    padding-top: 20px;
+    border-top: 1px solid #252a34;
+    color: #8c96a6;
+    font-size: 10px;
+}
+
+.footer strong {
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+@media (max-width: 720px) {
+    [data-testid="stMainBlockContainer"] {
+        padding: 2rem 1rem;
+    }
+
+    .brand {
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .status-pill {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+
+    .st-key-model_toolbar,
+    .st-key-input_panel,
+    .st-key-result_panel {
+        padding: 16px !important;
+    }
+
+    .empty-result {
+        min-height: 300px;
+    }
+
+    .workflow {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+
+    .footer {
+        flex-wrap: wrap;
+        line-height: 1.8;
+    }
+}
