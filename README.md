@@ -1,6 +1,6 @@
 # Classify_Number
 
-Dự án nhận dạng chữ số viết tay từ **0 đến 9** trên tập dữ liệu MNIST.
+Dự án nhận dạng chữ số viết tay từ **0 đến 9** trên tập dữ liệu MNIST, nhằm mục đích so sánh dộ hiệu quả giữa các mô hình học máy.
 
 Giao diện Streamlit cho phép vẽ chữ số, chọn ảnh mẫu và so sánh kết quả từ các mô hình đã huấn luyện.
 
