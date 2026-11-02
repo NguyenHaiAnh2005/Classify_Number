@@ -494,7 +494,7 @@ def main() -> None:
         '<div><span>01</span><strong>Một chữ số</strong>'
         '<p>Vẽ rõ nét hoặc chọn một ảnh mẫu MNIST.</p></div>'
         '<div><span>02</span><strong>Đúng định dạng</strong>'
-        '<p>Căn giữa ảnh, chuẩn hóa về 28 × 28.</p></div>'
+        '<p>Căn giữa ảnh, chuẩn hóa về 28 x 28.</p></div>'
         '<div><span>03</span><strong>Nhiều góc nhìn</strong>'
         '<p>Đối chiếu dự đoán giữa các mô hình.</p></div>'
         '</div>'
