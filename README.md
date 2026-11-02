@@ -1,52 +1,86 @@
-# 🔢 Classify_Number
-> Nhận dạng chữ số viết tay trên tập dữ liệu MNIST.
+# Classify_Number
 
-## 📖 Giới thiệu
+Dự án nhận dạng chữ số viết tay từ **0 đến 9** trên tập dữ liệu MNIST.
 
-**Classify_Number** là đồ án môn **Nhận dạng mẫu**, tập trung xây dựng
-và đánh giá các mô hình phân loại chữ số viết tay từ **0 đến 9**.
+Giao diện Streamlit cho phép vẽ chữ số, chọn ảnh mẫu và so sánh kết quả từ các mô hình đã huấn luyện.
 
-Dự án sử dụng tập dữ liệu **MNIST**, trong đó mỗi mẫu là một ảnh xám
-có kích thước **28 × 28 pixel**, tương ứng với **784 đặc trưng pixel**.
+## Yêu cầu
 
-## 🎯 Mục tiêu
+- **Python 3.14** — môi trường phát triển sử dụng **3.14.7**.
+- [Git](https://git-scm.com/downloads).
+- [Git LFS](https://git-lfs.com/) để tải các file mô hình.
+- Các thư viện trong `requirements.txt`.
 
-- Khám phá dữ liệu và xây dựng quy trình tiền xử lý.
-- Triển khai, huấn luyện và so sánh các mô hình nhận dạng.
-- Phân tích kết quả, ưu điểm và hạn chế của từng phương pháp.
-- Xây dựng giao diện **Streamlit** để người dùng vẽ chữ số và xem dự đoán.
+## Cài đặt trên Windows
 
-## 🧠 Các mô hình dự kiến
+Cài [Python 3.14](https://www.python.org/downloads/windows/), Git và Git LFS.
 
-| Mô hình | Hướng tiếp cận |
-|---|---|
-| Gaussian Naive Bayes | Phân loại dựa trên xác suất |
-| Logistic Regression | Phân loại tuyến tính đa lớp |
-| Random Forest | Kết hợp nhiều cây quyết định |
-| Multilayer Perceptron — MLP | Mạng neural truyền thẳng |
-| Convolutional Neural Network — CNN | Mạng neural tích chập cho ảnh |
+Mở PowerShell và chạy:
 
-## 📊 Quy trình đánh giá
+```powershell
+git lfs install
+git clone https://github.com/NguyenHaiAnh2005/Classify_Number.git
+cd Classify_Number
+git lfs pull
 
-Dữ liệu được chia thành ba tập với các vai trò riêng:
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
-- **Train:** huấn luyện mô hình.
-- **Validation:** lựa chọn cấu hình và theo dõi quá trình huấn luyện.
-- **Test:** đánh giá cuối sau khi chốt phương án.
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 
-Các tiêu chí so sánh gồm **Accuracy**, **Macro F1-score**,
-**Confusion Matrix**, thời gian huấn luyện và thời gian dự đoán.
+python -m streamlit run app/main.py
+```
 
-## 🛠️ Công nghệ sử dụng
+Nếu PowerShell không cho kích hoạt môi trường, có thể dùng Command Prompt:
 
-- **Python:** ngôn ngữ lập trình chính.
-- **NumPy, Pandas:** xử lý dữ liệu.
-- **Matplotlib, Seaborn:** trực quan hóa.
-- **Scikit-learn, PyTorch:** hỗ trợ xây dựng và đánh giá mô hình.
-- **Streamlit:** xây dựng giao diện tương tác.
-- **Jupyter Notebook:** khám phá dữ liệu và thực nghiệm.
+```cmd
+.venv\Scripts\activate.bat
+```
 
----
+Sau đó tiếp tục các lệnh cài thư viện và chạy ứng dụng.
 
-*Đồ án được thực hiện bởi nhóm 3 thành viên, hướng đến vận dụng
-kiến thức nhận dạng mẫu vào bài toán phân loại chữ số viết tay.*
+## Cài đặt trên Linux
+
+Cài Python 3.14 theo bản phân phối Linux đang sử dụng.
+
+Với Ubuntu/Debian, cài Git và Git LFS:
+
+```bash
+sudo apt update
+sudo apt install -y git git-lfs
+```
+
+Tải dự án và cài môi trường:
+
+```bash
+git lfs install
+git clone https://github.com/NguyenHaiAnh2005/Classify_Number.git
+cd Classify_Number
+git lfs pull
+
+python3.14 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+python -m streamlit run app/main.py
+```
+
+## Sử dụng
+
+Sau khi chạy, mở địa chỉ **Local URL** được hiển thị trong terminal, thường là:
+
+```text
+http://localhost:8501
+```
+
+1. Chọn mô hình nhận dạng.
+2. Vẽ một chữ số hoặc chọn ảnh mẫu MNIST.
+3. Nhấn **Nhận dạng chữ số**.
+4. Bật **So sánh tất cả mô hình** nếu muốn đối chiếu kết quả.
+
+Nhấn `Ctrl + C` trong terminal để dừng ứng dụng.
+
+**Lưu ý:** Giữ nguyên các thư mục `models/`, `src/` và `data/`. Chạy lệnh Streamlit tại thư mục gốc `Classify_Number`. Không cần huấn luyện lại khi đã có đầy đủ các file mô hình.

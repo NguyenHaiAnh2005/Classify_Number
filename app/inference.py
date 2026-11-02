@@ -272,8 +272,8 @@ def prepare_image(
 ) -> Image.Image:
     """Chuẩn bị ảnh MNIST, giữ tỷ lệ nét và căn tâm theo cường độ.
 
-    Ảnh vẽ được cắt vào khung tối đa 20 × 20, sau đó đặt lên
-    nền 28 × 28. Ảnh mẫu MNIST được giữ nguyên bố cục.
+    Ảnh vẽ được cắt vào khung tối đa 20 x 20, sau đó đặt lên
+    nền 28 x 28. Ảnh mẫu MNIST được giữ nguyên bố cục.
     """
     if background not in {"auto", "light", "dark"}:
         raise ValueError("Kiểu nền không hợp lệ.")
