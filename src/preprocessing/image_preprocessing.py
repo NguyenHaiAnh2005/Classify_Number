@@ -48,16 +48,3 @@ def clean_images(X, y):
     return X, y
 
 
-def augment_shift(X, y, max_shift=2, seed=42):
-    """
-    Tăng cường dữ liệu: dịch mỗi ảnh ngẫu nhiên tối đa max_shift pixel.
-    Trả về dữ liệu gốc + dữ liệu đã dịch (gấp đôi số ảnh).
-    Chỉ dùng cho TRAIN (sau khi chia validation).
-    """
-    rng = np.random.RandomState(seed)
-    X_new = X.copy()
-    for i in range(len(X_new)):
-        dy = rng.randint(-max_shift, max_shift + 1)
-        dx = rng.randint(-max_shift, max_shift + 1)
-        X_new[i] = np.roll(X_new[i], shift=(dy, dx), axis=(0, 1))
-    return np.concatenate([X, X_new]), np.concatenate([y, y])
