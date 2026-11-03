@@ -110,46 +110,6 @@ def scale_flat(X_train, X_val, X_test, mode="raw"):
 
 
 # ---------------------------------------------------------------- #
-# Cross-validation dùng cho tuning hyperparameter
-# ---------------------------------------------------------------- #
-def iter_kfold(X, y, n_splits=5, seed=42, mode="raw"):
-    """Yield các fold train/val đã qua tiền xử lý kiểu ``mode``."""
-
-    # Flat preprocessing does not support CNN image layouts.
-    valid_modes = {"raw", "binary", "standard"}
-
-    if mode not in valid_modes:
-        raise ValueError(
-            f"Unknown mode: {mode!r}. Expected one of {sorted(valid_modes)}."
-        )
-
-
-    X = np.asarray(X)
-    y = np.asarray(y)
-
-    if n_splits < 2:
-        raise ValueError("n_splits phải >= 2")
-    if len(X) != len(y):
-        raise ValueError("X và y phải có cùng số mẫu")
-
-    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
-    for train_idx, val_idx in skf.split(X, y):
-        X_train_fold, X_val_fold = X[train_idx], X[val_idx]
-        y_train_fold, y_val_fold = y[train_idx], y[val_idx]
-
-        X_train_fold, X_val_fold, _, _ = scale_flat(
-            X_train_fold, X_val_fold, X_val_fold, mode=mode
-        )
-
-        yield {
-            "X_train": X_train_fold,
-            "y_train": y_train_fold,
-            "X_val": X_val_fold,
-            "y_val": y_val_fold,
-        }
-
-
-# ---------------------------------------------------------------- #
 # Hàm tổng hợp
 # ---------------------------------------------------------------- #
 def prepare(kind, X_train, y_train, X_test, y_test, val_size=0.1,
