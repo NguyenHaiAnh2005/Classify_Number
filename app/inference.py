@@ -103,17 +103,35 @@ def model_revision(
 
     return tuple(revision)
 
-
 def load_mlp(path: Path) -> MLP:
-    """Khôi phục kiến trúc MLP và đúng vị trí các lớp dropout."""
+    """Restore MLP architecture and trained weights."""
+
     checkpoint = torch.load(
         path,
         map_location="cpu",
-        weights_only=True,
+        weights_only=True
     )
 
-    model = MLP(**checkpoint["config"])
-    model.model.load_state_dict(checkpoint["model_state_dict"])
+    # Chỉ lấy tham số dùng để khởi tạo kiến trúc MLP
+    config = checkpoint["config"]
+
+    model_config = {
+        "sizes": config["sizes"],
+        "p_drop": config["p_drop"],
+        "activation": config["activation"],
+        "init": config["init"],
+        "seed": config["seed"],
+    }
+
+    # Recreate architecture
+    model = MLP(**model_config)
+
+    # Restore trained weights
+    model.model.load_state_dict(
+        checkpoint["model_state_dict"],
+        strict=True
+    )
+
     model.model.eval()
 
     return model
