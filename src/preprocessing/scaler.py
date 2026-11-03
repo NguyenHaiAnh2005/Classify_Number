@@ -16,7 +16,7 @@ kind:
     "standard" : vector mean 0, std 1   -> Perceptron, Logistic Regression, SVM tuyến tính
 """
 import numpy as np
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from src.preprocessing.image_preprocessing import augment_shift
