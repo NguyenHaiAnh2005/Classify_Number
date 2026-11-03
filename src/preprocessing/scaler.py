@@ -86,11 +86,24 @@ def scale_flat(X_train, X_val, X_test, mode="raw"):
         X_test_ = (X_test_ >= 0.5).astype("float32")
 
     elif mode == "standard":
-        scaler = StandardScaler()
-        X_train_ = scaler.fit_transform(X_train_)
-        X_val_ = scaler.transform(X_val_)
-        X_test_ = scaler.transform(X_test_)
-        tools["scaler"] = scaler
+        # 1. Tính mean và std CHỈ TRÊN TẬP TRAIN (tránh data leakage)
+        # .mean() và .std() không truyền axis sẽ tính trên toàn bộ array -> ra 1 số vô hướng (scalar)
+        mean = X_train_.mean() 
+        std = X_train_.std()
+        
+        # Tránh chia cho 0
+        if std < 1e-7:
+            std = 1.0
+            
+        print(f"Global Mean: {mean:.4f}, Global Std: {std:.4f}")
+
+        # 2. Áp dụng cho cả 3 tập
+        X_train_ = (X_train_ - mean) / std
+        X_val_ = (X_val_ - mean) / std
+        X_test_ = (X_test_ - mean) / std
+        
+        tools["mean"] = mean
+        tools["std"] = std
 
     return (X_train_.astype("float32"), X_val_.astype("float32"),
             X_test_.astype("float32"), tools)

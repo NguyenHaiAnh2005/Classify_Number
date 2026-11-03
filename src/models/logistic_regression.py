@@ -4,10 +4,12 @@ import numpy as np
 def add_bias(X):
     return np.hstack([X, np.ones((X.shape[0], 1))])
 
+
 def softmax(z):
-    z = z - np.max(z, axis = 1, keepdims=True)
+    z = z - np.max(z, axis=1, keepdims=True)
     e_z = np.exp(z)
-    return e_z / np.sum(e_z, axis = 1, keepdims=True)
+    return e_z / np.sum(e_z, axis=1, keepdims=True)
+
 
 def cross_entropy(z, y):
     z_shifted = z - np.max(z, axis=1, keepdims=True)
@@ -21,13 +23,16 @@ def cross_entropy(z, y):
 
 
 class LogisticRegression:
-    def __init__(self, eta=0.1, lam=1e-3, max_epochs=100, batch_size=128, seed=42, tol=1e-7):
+
+    def __init__(self, eta=0.1, lam=1e-3, max_epochs=100,
+                 batch_size=128, seed=42, patience=5):
+
         self.eta = eta
         self.lam = lam
         self.max_epochs = max_epochs
         self.batch_size = batch_size
         self.seed = seed
-        self.tol = tol
+        self.patience = patience
 
     def fit(self, X, y, X_val=None, y_val=None):
         Xb = add_bias(X)
@@ -46,6 +51,14 @@ class LogisticRegression:
             "train_loss": [],
             "val_loss": []
         }
+
+        # khoi tao early stopping 
+        best_val_loss = float("inf")
+        best_W = None
+        wait = 0
+
+        self.best_epoch_ = None
+        self.best_val_loss_ = None
 
         for epoch in range(self.max_epochs):
             indices = rng.permutation(N)
@@ -66,27 +79,44 @@ class LogisticRegression:
 
                 self.W_ -= self.eta * grad
 
-        # Loss sau khi cập nhật hết các mini-batch
+            # Loss sau khi cập nhật hết các mini-batch
             train_logits = Xb @ self.W_
             train_loss = cross_entropy(train_logits, y)
-            train_loss += 0.5 * self.lam * np.sum((mask * self.W_) ** 2)
+
+            train_loss += 0.5 * self.lam * np.sum(
+                (mask * self.W_) ** 2
+            )
 
             self.history_["train_loss"].append(train_loss)
 
             if X_val is not None and y_val is not None:
                 val_logits = self.decision_function(X_val)
+
                 val_loss = cross_entropy(val_logits, y_val)
-                val_loss += 0.5 * self.lam * np.sum(
-                    (mask * self.W_) ** 2
-                )
+
                 self.history_["val_loss"].append(val_loss)
 
-            if epoch > 0:
-                previous = self.history_["train_loss"][-2]
-                current = self.history_["train_loss"][-1]
-
-                if abs(previous - current) < self.tol:
+                # Early Stopping theo Validation Loss
+                if not np.isfinite(val_loss):
+                    print("Validation Loss không hợp lệ, dừng huấn luyện.")
                     break
+
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    self.best_epoch_ = epoch + 1
+                    best_W = self.W_.copy()
+                    wait = 0
+                else:
+                    wait += 1
+
+                    if wait >= self.patience:
+                        print(f"Early Stopping tại epoch {epoch + 1}")
+                        break
+
+        # Khôi phục trọng số tốt nhất
+        if best_W is not None:
+            self.W_ = best_W.copy()
+            self.best_val_loss_ = best_val_loss
 
         return self
 
@@ -98,8 +128,3 @@ class LogisticRegression:
 
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
-
-
-
-
-
