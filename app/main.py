@@ -1,9 +1,10 @@
-"""Giao diện Webify Dark cho các mô hình MNIST trong models/."""
+"""Ứng dụng MNIST với giao diện tối giản và điểm nhấn xanh ngọc."""
 
 import hashlib
 import io
 import logging
 import sys
+from html import escape
 from pathlib import Path
 from time import perf_counter
 
@@ -26,339 +27,405 @@ from app.inference import (
 )
 
 LOGGER = logging.getLogger(__name__)
-APP_DIR = Path(__file__).resolve().parent
 
 
-@st.cache_resource(show_spinner=False, max_entries=14)
+@st.cache_resource(show_spinner=False, max_entries=16)
 def get_model(key: str, revision: tuple) -> object:
-    """Nạp lại mô hình khi phiên bản file thay đổi."""
     return load_model(key)
 
 
 @st.cache_data(show_spinner=False)
 def load_samples() -> tuple[np.ndarray, np.ndarray]:
-    """Đọc ảnh MNIST; nhãn thật không được đưa vào mô hình."""
-    path = ROOT / "data" / "raw" / "mnist_test.npz"
-
-    with np.load(path) as data:
+    with np.load(ROOT / "data/raw/mnist_test.npz") as data:
         return data["X"], data["y"]
 
 
 def clear_drawing() -> None:
-    """Tạo canvas mới và xóa kết quả của ảnh trước."""
     st.session_state.canvas_version += 1
     st.session_state.pop("prediction", None)
 
 
 def next_sample() -> None:
-    """Chọn ảnh mẫu khác của chữ số hiện tại."""
     st.session_state.sample_offset += 1
+    st.session_state.pop("prediction", None)
 
 
-def render_header(available_count: int) -> None:
-    """Hiển thị tên ứng dụng và số mô hình có sẵn."""
-    st.html(
-        '<div class="topbar">'
-        '<div class="brand">DIGIT RECOGNITION</div>'
-        f'<span class="status-pill"><i></i>{available_count} mô hình '
-        'có sẵn</span></div>'
-    )
-
-
-def render_drawing() -> Image.Image | None:
-    """Hiển thị canvas và đọc ảnh RGBA từ nét viết."""
-    controls, action = st.columns(
-        [2, 1],
-        vertical_alignment="bottom",
-    )
-
-    with controls:
-        stroke_width = st.slider(
-            "Độ dày nét",
-            min_value=8,
-            max_value=32,
-            value=18,
-            step=2,
+def render_input(source: str) -> tuple[Image.Image | None, str]:
+    if source == "Vẽ tay":
+        canvas = st_canvas(
+            fill_color="rgba(0,0,0,0)",
+            stroke_width=st.session_state.stroke_width,
+            stroke_color="#FFFFFF",
+            background_color="#000000",
+            width=256,
+            height=256,
+            drawing_mode="freedraw",
+            return_image_data=True,
+            key=f"canvas_{st.session_state.canvas_version}",
         )
 
-    with action:
+        controls, clear = st.columns(
+            [2, 1],
+            vertical_alignment="bottom",
+        )
+
+        with controls:
+            st.slider(
+                "Độ dày nét",
+                8,
+                32,
+                step=2,
+                key="stroke_width",
+            )
+
+        with clear:
+            st.button(
+                "Xóa nét",
+                on_click=clear_drawing,
+                width="stretch",
+            )
+
+        st.caption(
+            "Vẽ một chữ số ở giữa khung, nét rõ và đủ lớn."
+        )
+
+        image = (
+            None
+            if canvas.image_data is None
+            else Image.fromarray(canvas.image_data.astype(np.uint8))
+        )
+        return image, "dark"
+
+    if source == "Ảnh MNIST":
+        try:
+            images, labels = load_samples()
+        except (OSError, KeyError, ValueError):
+            st.info(
+                "Chưa có dữ liệu mẫu. Bạn vẫn có thể vẽ hoặc tải ảnh."
+            )
+            return None, "dark"
+
+        digit = st.select_slider(
+            "Chữ số mẫu",
+            list(range(10)),
+            value=7,
+        )
+        indices = np.flatnonzero(labels == digit)
+
+        if not len(indices):
+            st.warning("Không có ảnh mẫu cho chữ số này.")
+            return None, "dark"
+
+        index = indices[
+            st.session_state.sample_offset % len(indices)
+        ]
+        image = Image.fromarray(images[index].astype(np.uint8))
+
+        st.image(
+            image,
+            width=256,
+            caption=f"MNIST · nhãn thật: {digit}",
+        )
         st.button(
-            "Xóa nét vẽ",
-            on_click=clear_drawing,
+            "Đổi ảnh mẫu",
+            on_click=next_sample,
             width="stretch",
         )
 
-    canvas = st_canvas(
-        fill_color="rgba(0, 0, 0, 0)",
-        stroke_width=stroke_width,
-        stroke_color="#FFFFFF",
-        background_color="#000000",
-        width=280,
-        height=280,
-        drawing_mode="freedraw",
-        return_image_data=True,
-        key=f"digit_canvas_{st.session_state.canvas_version}",
+        return image, "dark"
+
+    uploaded = st.file_uploader(
+        "Chọn ảnh chữ số",
+        type=["png", "jpg", "jpeg", "webp"],
+    )
+    background = st.selectbox(
+        "Nền ảnh",
+        ["Tự động", "Nền sáng", "Nền tối"],
     )
 
-    st.caption(
-        "Vẽ một chữ số 0–9 ở giữa khung. "
-        "Dùng nét liền, rõ và đủ lớn."
-    )
-
-    if canvas.image_data is None:
-        return None
-
-    return Image.fromarray(
-        canvas.image_data.astype(np.uint8)
-    )
-
-
-def render_sample() -> Image.Image | None:
-    """Chọn ảnh MNIST có sẵn để thử ứng dụng."""
-    try:
-        images, labels = load_samples()
-    except (OSError, KeyError, ValueError):
-        st.info(
-            "Chưa có data/raw/mnist_test.npz. "
-            "Bạn vẫn có thể vẽ chữ số."
+    if uploaded is None:
+        st.caption(
+            "Dùng ảnh chứa một chữ số, nền đơn giản và tương phản rõ."
         )
-        return None
+        return None, "auto"
 
-    digit = st.select_slider(
-        "Chữ số mẫu",
-        options=list(range(10)),
-        value=7,
-    )
+    try:
+        with Image.open(uploaded) as opened:
+            image = opened.copy()
 
-    indices = np.flatnonzero(labels == digit)
+        st.image(image, width=256)
 
-    if not len(indices):
-        st.warning("Tập dữ liệu chưa có ảnh của chữ số này.")
-        return None
+        return image, {
+            "Tự động": "auto",
+            "Nền sáng": "light",
+            "Nền tối": "dark",
+        }[background]
 
-    index = indices[
-        st.session_state.sample_offset % len(indices)
-    ]
-    image = Image.fromarray(
-        images[index].astype(np.uint8)
-    )
-
-    st.image(
-        image,
-        width=280,
-        caption=f"Ảnh MNIST · nhãn thật: {digit}",
-    )
-    st.button("Đổi ảnh mẫu", on_click=next_sample)
-    st.caption(
-        "Nhãn thật chỉ để đối chiếu; "
-        "mô hình chỉ nhận pixel của ảnh."
-    )
-
-    return image
+    except (OSError, ValueError, Image.DecompressionBombError):
+        st.warning(
+            "Không đọc được ảnh. Hãy thử một tệp PNG hoặc JPG khác."
+        )
+        return None, "auto"
 
 
 def run_predictions(
     pixels: np.ndarray,
     keys: list[str],
+    revisions: dict,
 ) -> dict:
-    """Chạy suy luận và ghi nhận lỗi riêng của từng mô hình."""
     results, errors = {}, {}
 
     for key in keys:
         try:
-            model = get_model(
-                key,
-                model_revision(MODELS[key]),
-            )
+            model = get_model(key, revisions[key])
 
             start = perf_counter()
             probabilities = predict_probabilities(model, pixels)
-            elapsed_ms = (perf_counter() - start) * 1000
 
             results[key] = {
                 "probabilities": probabilities,
                 "digit": int(probabilities.argmax()),
                 "confidence": float(probabilities.max()),
-                "elapsed_ms": elapsed_ms,
+                "elapsed_ms": (perf_counter() - start) * 1000,
             }
 
         except Exception as error:
-            LOGGER.exception("Không dự đoán được bằng %s", key)
+            LOGGER.exception("Không chạy được mô hình %s", key)
             errors[key] = str(error)
 
     return {"results": results, "errors": errors}
 
 
-def render_probabilities(probabilities: np.ndarray) -> None:
-    """Hiển thị phân phối xác suất của đủ 10 chữ số."""
-    winner = int(probabilities.argmax())
+def render_result(
+    prediction: dict | None,
+    selected: str,
+) -> None:
+    st.html(
+        '<div class="section-label">'
+        '02 / KẾT QUẢ NHẬN DẠNG</div>'
+    )
+
+    if prediction is None:
+        st.html("""
+            <div class="empty-result">
+                <div class="empty-ring">?</div>
+                <h3>Chờ một nét vẽ.</h3>
+                <p>
+                    Thêm ảnh đầu vào và nhấn nhận dạng<br>
+                    để xem kết quả tại đây.
+                </p>
+                <span class="pill muted-pill">
+                    0 — 9 · Handwritten digits
+                </span>
+            </div>
+        """)
+        return
+
+    result = prediction["results"].get(selected)
+
+    if result is None:
+        st.error(f"Không chạy được {MODELS[selected].name}.")
+
+        with st.expander("Chi tiết lỗi"):
+            st.code(
+                prediction["errors"].get(
+                    selected,
+                    "Chưa có kết quả.",
+                ),
+                language=None,
+            )
+        return
+
+    confidence = result["confidence"] * 100
+
+    st.html(f"""
+        <div class="result-summary">
+            <div>
+                <div class="overline">CHỮ SỐ DỰ ĐOÁN</div>
+                <div class="predicted-digit">{result['digit']}</div>
+            </div>
+            <div
+                class="confidence-ring"
+                style="--angle:{confidence * 3.6:.3f}deg"
+            >
+                <div>
+                    <strong>{confidence:.1f}<small>%</small></strong>
+                    <span>XÁC SUẤT</span>
+                </div>
+            </div>
+        </div>
+        <div class="result-meta">
+            <span>{escape(MODELS[selected].name)}</span>
+            <span>{result['elapsed_ms']:.1f} ms</span>
+        </div>
+    """)
+
+    st.html(
+        '<div class="section-label chart-label">'
+        'PHÂN PHỐI XÁC SUẤT</div>'
+    )
+
     bars = []
 
-    for digit, probability in enumerate(probabilities):
+    for digit, probability in enumerate(result["probabilities"]):
         percent = float(probability) * 100
-        active = " active" if digit == winner else ""
+        active = " active" if digit == result["digit"] else ""
 
-        bars.append(
-            f'<div class="probability-row{active}">'
-            f'<span class="digit-label">{digit}</span>'
-            '<div class="probability-track" role="meter" '
-            f'aria-label="Xác suất chữ số {digit}" '
-            'aria-valuemin="0" aria-valuemax="100" '
-            f'aria-valuenow="{percent:.2f}">'
-            f'<div style="width:{percent:.4f}%"></div></div>'
-            f'<span class="probability-value">{percent:.1f}%</span>'
-            '</div>'
-        )
+        bars.append(f"""
+            <div class="probability-row{active}">
+                <span>{digit}</span>
+                <div
+                    class="bar-track"
+                    role="meter"
+                    aria-label="Xác suất chữ số {digit}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="{percent:.2f}"
+                >
+                    <i style="width:{percent:.4f}%"></i>
+                </div>
+                <b>{percent:.1f}%</b>
+            </div>
+        """)
 
     st.html(
         '<div class="probability-chart">'
         + "".join(bars)
         + "</div>"
     )
-
-
-def render_result(
-    prediction: dict | None,
-    selected_key: str,
-) -> None:
-    """Hiển thị kết quả hiện tại và bảng so sánh mô hình."""
-    st.html(
-        '<div class="eyebrow panel-label">'
-        '02 / KẾT QUẢ NHẬN DẠNG</div>'
+    st.caption(
+        "Xác suất của dự đoán này, "
+        "không phải độ chính xác trên tập kiểm thử."
     )
 
-    if prediction is None:
+
+def render_comparison(
+    prediction: dict,
+    selected: str,
+) -> None:
+    reference = prediction["results"].get(selected, {}).get("digit")
+
+    with st.container(border=True, key="comparison"):
         st.html(
-            '<div class="empty-result">'
-            '<div class="empty-digit">?</div>'
-            '<h3>Mỗi nét vẽ, một khả năng.</h3>'
-            '<p>Thêm một chữ số ở bên trái rồi nhấn<br>'
-            '<strong>Nhận dạng chữ số</strong> để xem kết quả.</p>'
-            '<span class="small-pill">10 lớp · từ 0 đến 9</span>'
-            '</div>'
-        )
-        return
-
-    result = prediction["results"].get(selected_key)
-
-    if result is not None:
-        st.html(
-            '<div class="prediction-hero"><div>'
-            '<span class="muted">CHỮ SỐ DỰ ĐOÁN</span>'
-            f'<div class="prediction-digit">{result["digit"]}</div>'
-            '</div><div class="prediction-summary">'
-            f'<span class="confidence">{result["confidence"]:.1%}</span>'
-            '<span class="muted">Xác suất dự đoán</span>'
-            f'<span class="small-pill">{result["elapsed_ms"]:.0f} ms'
-            '</span></div></div>'
+            '<div class="section-label">'
+            '03 / ĐỐI CHIẾU MÔ HÌNH</div>'
         )
 
-        st.caption(MODELS[selected_key].name)
-        st.markdown("**Phân phối xác suất**")
-        render_probabilities(result["probabilities"])
-        st.caption(
-            "Xác suất do mô hình ước lượng, "
-            "không phải độ chính xác thực tế."
-        )
+        rows = []
 
-    for key, error in prediction["errors"].items():
-        st.error(f"Không chạy được {MODELS[key].name}.")
+        for spec in MODEL_SPECS:
+            key = spec.key
+            item = prediction["results"].get(key)
 
-        with st.expander("Chi tiết lỗi mô hình"):
-            st.code(error, language=None)
+            if item is None and key not in prediction["errors"]:
+                continue
 
-    if len(prediction["results"]) > 1:
-        with st.expander(
-            "Đối chiếu các mô hình",
-            expanded=True,
-        ):
-            rows = [
-                {
-                    "Mô hình": MODELS[key].name,
-                    "Dự đoán": item["digit"],
-                    "Xác suất": f'{item["confidence"]:.1%}',
-                    "Thời gian": f'{item["elapsed_ms"]:.0f} ms',
-                }
-                for key, item in prediction["results"].items()
-            ]
+            if item is None:
+                rows.append(f"""
+                    <div class="model-row">
+                        <span class="status-icon error">×</span>
+                        <div>
+                            <strong>{escape(spec.name)}</strong>
+                            <small>Không chạy được</small>
+                        </div>
+                        <span class="row-value">—</span>
+                        <span></span>
+                    </div>
+                """)
+                continue
 
-            st.dataframe(
-                rows,
-                hide_index=True,
-                width="stretch",
+            agree = (
+                reference is not None
+                and item["digit"] == reference
             )
+            state = (
+                "agree"
+                if agree
+                else "different"
+                if reference is not None
+                else "neutral"
+            )
+            symbol = (
+                "✓"
+                if agree
+                else "≠"
+                if reference is not None
+                else "•"
+            )
+            active = " selected" if key == selected else ""
+            percent = item["confidence"] * 100
+
+            rows.append(f"""
+                <div class="model-row{active}">
+                    <span class="status-icon {state}">{symbol}</span>
+                    <div>
+                        <strong>{escape(spec.name)}</strong>
+                        <small>
+                            Dự đoán {item['digit']}
+                            · {item['elapsed_ms']:.1f} ms
+                        </small>
+                    </div>
+                    <div class="bar-track">
+                        <i style="width:{percent:.4f}%"></i>
+                    </div>
+                    <span class="row-value">{percent:.1f}%</span>
+                </div>
+            """)
+
+        st.html(
+            '<div class="model-list">'
+            + "".join(rows)
+            + "</div>"
+        )
+        st.caption(
+            "✓ Cùng dự đoán với mô hình đang chọn · "
+            "≠ Khác dự đoán. Không phải đánh giá đúng/sai."
+        )
+
+        if prediction["errors"]:
+            with st.expander("Chi tiết các mô hình gặp lỗi"):
+                for key, error in prediction["errors"].items():
+                    st.markdown(f"**{MODELS[key].name}**")
+                    st.code(error, language=None)
 
 
-def render_catalog(unavailable: dict[str, str]) -> None:
-    """Liệt kê các file mô hình được ứng dụng sử dụng."""
-    with st.expander(
-        "Kho mô hình · xem các mô hình đã huấn luyện"
-    ):
+def render_catalog(unavailable: dict) -> None:
+    with st.expander("Kho mô hình & trọng số"):
         for spec in MODEL_SPECS:
             status = (
-                "Chưa sẵn sàng"
+                "Thiếu trọng số"
                 if spec.key in unavailable
-                else "Có sẵn"
+                else "Có trọng số"
             )
-
             st.markdown(f"**{spec.name}** · {status}")
             st.caption(spec.description)
             st.code(
                 "\n".join(
-                    f"models/{filename}"
-                    for filename in spec.files
-                )
+                    f"models/{name}" for name in spec.files
+                ),
+                language=None,
             )
 
             if spec.key in unavailable:
                 st.warning(unavailable[spec.key])
 
-        st.caption(
-            "Random Forest và KNN là các thành viên đã train "
-            "của ensemble. Ứng dụng không huấn luyện lại."
-        )
-
-
-def render_processed_image(image: Image.Image) -> None:
-    """Hiển thị và cho phép tải ảnh sau tiền xử lý."""
-    with st.expander("Xem ảnh sau tiền xử lý"):
-        st.image(
-            image,
-            width=140,
-            caption="Ảnh đầu vào 28 × 28",
-        )
-        st.caption(
-            "Nét sáng trên nền đen · pixel chia 255 về [0, 1]. "
-            "CNN: (1, 1, 28, 28). "
-            "Các mô hình còn lại: (1, 784)."
-        )
-
-        buffer = io.BytesIO()
-        image.save(buffer, format="PNG")
-
-        st.download_button(
-            "Tải ảnh 28 × 28",
-            data=buffer.getvalue(),
-            file_name="digit_28x28.png",
-            mime="image/png",
-        )
-
 
 def main() -> None:
-    """Tổ chức giao diện, kiểm tra đầu vào và chạy suy luận."""
     st.set_page_config(
-        page_title="DIGIT RECOGNITION",
+        page_title="Digit Studio",
+        page_icon="✳",
         layout="wide",
-        initial_sidebar_state="collapsed",
     )
 
-    stylesheet = (APP_DIR / "styles.css").read_text(
-        encoding="utf-8"
-    )
-    st.html("<style>" + stylesheet + "</style>")
+    css = (ROOT / "app/styles.css").read_text(encoding="utf-8")
+    st.html("<style>" + css + "</style>")
 
-    st.session_state.setdefault("canvas_version", 0)
-    st.session_state.setdefault("sample_offset", 0)
+    for key, default in {
+        "canvas_version": 0,
+        "sample_offset": 0,
+        "stroke_width": 18,
+    }.items():
+        st.session_state.setdefault(key, default)
 
     revisions, unavailable = {}, {}
 
@@ -368,146 +435,186 @@ def main() -> None:
         except (OSError, ValueError) as error:
             unavailable[spec.key] = str(error)
 
-    render_header(len(revisions))
+    st.html(f"""
+        <div class="topbar">
+            <div class="brand">
+                <span class="brand-mark">✳</span>
+                digit<span>studio</span>
+            </div>
+            <span class="pill">
+                <i></i>
+                {len(revisions)}/{len(MODEL_SPECS)} bộ trọng số
+            </span>
+        </div>
+        <div class="intro">
+            <div class="overline">
+                HANDWRITTEN DIGIT RECOGNITION
+            </div>
+            <h1>Một nét vẽ. <span>Một con số.</span></h1>
+            <p>
+                Vẽ, thử ảnh và khám phá cách các mô hình
+                nhận dạng chữ số.
+            </p>
+        </div>
+    """)
 
     if not revisions:
         st.error(
-            "Chưa tìm thấy mô hình hợp lệ trong thư mục models."
+            "Chưa có trọng số hợp lệ. "
+            "Kiểm tra thư mục models hoặc chạy git lfs pull."
         )
         render_catalog(unavailable)
         return
 
-    with st.container(border=True, key="model_toolbar"):
+    with st.container(border=True, key="workspace"):
         selector, comparison = st.columns(
-            [3, 2],
+            [2, 1],
             vertical_alignment="bottom",
         )
 
         with selector:
-            selected_key = st.selectbox(
+            selected = st.selectbox(
                 "Mô hình nhận dạng",
-                options=list(revisions),
+                list(revisions),
                 format_func=lambda key: MODELS[key].name,
             )
 
         with comparison:
-            compare = st.checkbox(
-                "So sánh tất cả mô hình",
-                value=False,
+            compare = st.toggle("So sánh tất cả", value=True)
+
+        st.caption(MODELS[selected].description)
+        st.divider()
+
+        left, right = st.columns([1, 1], gap="large")
+
+        with left, st.container(key="input_panel"):
+            st.html(
+                '<div class="section-label">'
+                '01 / ẢNH ĐẦU VÀO</div>'
             )
 
-        st.caption(MODELS[selected_key].description)
-
-    left, right = st.columns([1.05, 1], gap="large")
-
-    with left, st.container(
-        border=True,
-        key="input_panel",
-    ):
-        st.html(
-            '<div class="eyebrow panel-label">'
-            '01 / CHỮ SỐ CỦA BẠN</div>'
-        )
-
-        source = st.radio(
-            "Cách nhập",
-            options=["Vẽ tay", "Ảnh mẫu MNIST"],
-            horizontal=True,
-            label_visibility="collapsed",
-        )
-
-        if source == "Vẽ tay":
-            image = render_drawing()
-        else:
-            image = render_sample()
-
-        processed, input_error = None, None
-
-        if image is not None:
-            try:
-                processed = prepare_image(
-                    image,
-                    background="dark",
-                    preserve_layout=source == "Ảnh mẫu MNIST",
-                )
-            except ValueError as error:
-                input_error = str(error)
-
-        keys = list(revisions) if compare else [selected_key]
-        token = None
-
-        if processed is not None:
-            digest = hashlib.sha256(
-                processed.tobytes()
-            ).hexdigest()
-
-            token = (
-                digest,
-                selected_key,
-                source,
-                tuple((key, revisions[key]) for key in keys),
+            source = st.radio(
+                "Cách nhập",
+                ["Vẽ tay", "Ảnh MNIST", "Tải ảnh"],
+                horizontal=True,
+                label_visibility="collapsed",
             )
 
-        previous = st.session_state.get("prediction")
+            image, background = render_input(source)
+            processed, input_error = None, None
 
-        if token is None or (
-            previous and previous["token"] != token
-        ):
-            st.session_state.pop("prediction", None)
-
-        if st.button(
-            "Nhận dạng chữ số →",
-            type="primary",
-            width="stretch",
-        ):
-            if processed is None:
-                st.warning(
-                    input_error
-                    or "Hãy vẽ hoặc chọn một ảnh trước."
+            with st.expander("Ảnh xử lý & góc xoay"):
+                angle = st.slider(
+                    "Góc xoay thử nghiệm",
+                    -30,
+                    30,
+                    0,
+                    5,
+                    format="%d°",
+                    help=(
+                        "Áp dụng cùng góc xoay cho mọi mô hình. "
+                        "Góc dương xoay ngược chiều kim đồng hồ."
+                    ),
                 )
-            else:
-                with st.spinner("Đang đọc nét viết của bạn…"):
-                    prediction = run_predictions(
-                        np.asarray(processed),
-                        keys,
+
+                if image is not None:
+                    try:
+                        processed = prepare_image(
+                            image,
+                            background,
+                            source == "Ảnh MNIST",
+                        )
+
+                        if angle:
+                            processed = processed.rotate(
+                                angle,
+                                resample=Image.Resampling.BILINEAR,
+                                fillcolor=0,
+                            )
+
+                        st.image(
+                            processed,
+                            width=112,
+                            caption=(
+                                "Ảnh đưa vào mọi mô hình · 28 × 28"
+                            ),
+                        )
+
+                        buffer = io.BytesIO()
+                        processed.save(buffer, format="PNG")
+
+                        st.download_button(
+                            "Tải ảnh đã xử lý",
+                            buffer.getvalue(),
+                            file_name="digit_28x28.png",
+                            mime="image/png",
+                        )
+
+                    except ValueError as error:
+                        input_error = str(error)
+
+                else:
+                    st.caption(
+                        "Thêm ảnh để xem bản xử lý và thử CNN Rotated."
                     )
 
-                st.session_state.prediction = {
-                    "token": token,
-                    **prediction,
-                }
+            keys = list(revisions) if compare else [selected]
 
-        if processed is not None:
-            render_processed_image(processed)
+            token = (
+                None
+                if processed is None
+                else (
+                    source,
+                    angle,
+                    hashlib.sha256(processed.tobytes()).hexdigest(),
+                    tuple((key, revisions[key]) for key in keys),
+                )
+            )
 
-    with right, st.container(
-        border=True,
-        key="result_panel",
-    ):
-        render_result(
-            st.session_state.get("prediction"),
-            selected_key,
-        )
+            previous = st.session_state.get("prediction")
 
-    st.html(
-        '<div class="workflow">'
-        '<div><span>01</span><strong>Một chữ số</strong>'
-        '<p>Vẽ rõ nét hoặc chọn một ảnh mẫu MNIST.</p></div>'
-        '<div><span>02</span><strong>Đúng định dạng</strong>'
-        '<p>Căn giữa ảnh, chuẩn hóa về 28 x 28.</p></div>'
-        '<div><span>03</span><strong>Nhiều góc nhìn</strong>'
-        '<p>Đối chiếu dự đoán giữa các mô hình.</p></div>'
-        '</div>'
-    )
+            if token is None or (
+                previous and previous["token"] != token
+            ):
+                st.session_state.pop("prediction", None)
+
+            if input_error:
+                st.caption(input_error)
+
+            if st.button(
+                "Nhận dạng chữ số →",
+                type="primary",
+                width="stretch",
+                disabled=processed is None,
+            ):
+                with st.spinner("Đang nhận dạng…"):
+                    st.session_state.prediction = {
+                        "token": token,
+                        **run_predictions(
+                            np.asarray(processed),
+                            keys,
+                            revisions,
+                        ),
+                    }
+
+        with right, st.container(key="result_panel"):
+            render_result(
+                st.session_state.get("prediction"),
+                selected,
+            )
+
+    prediction = st.session_state.get("prediction")
+
+    if prediction and compare:
+        render_comparison(prediction, selected)
 
     render_catalog(unavailable)
 
     st.html(
         '<div class="footer">'
-        '<strong>DIGIT RECOGNITION</strong>'
-        '<span>Classify_Number · Đồ án Nhận dạng mẫu</span>'
-        '<span>Built with Python & Streamlit</span>'
-        '</div>'
+        '<span>Digit Studio · Classify_Number</span>'
+        '<span>MNIST · 0–9</span>'
+        "</div>"
     )
 
 

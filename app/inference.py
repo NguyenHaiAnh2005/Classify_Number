@@ -1,4 +1,4 @@
-"""Nạp mô hình đã train và chuẩn bị đầu vào theo định dạng MNIST."""
+"""Nạp các trọng số đã lưu và suy luận chữ số MNIST."""
 
 import json
 from dataclasses import dataclass
@@ -18,8 +18,6 @@ MODELS_DIR = ROOT / "models"
 
 @dataclass(frozen=True)
 class ModelSpec:
-    """Thông tin về một mô hình đã được lưu."""
-
     key: str
     name: str
     files: tuple[str, ...]
@@ -31,58 +29,62 @@ MODEL_SPECS = (
         "cnn",
         "CNN",
         ("mnist_cnn.pth",),
-        "Mạng tích chập nhận dạng đặc trưng không gian của nét viết.",
+        "Mạng tích chập học từ ảnh MNIST gốc.",
+    ),
+    ModelSpec(
+        "cnn_rotated",
+        "CNN Rotated",
+        ("mnist_cnn_rotated.pth",),
+        "CNN học từ ảnh tăng cường bằng phép xoay ngẫu nhiên ±15°.",
     ),
     ModelSpec(
         "mlp",
         "MLP",
         ("mlp_model.pth",),
-        "Mạng neural 784 → 500 → 10, lan truyền ngược tự cài đặt.",
+        "Mạng neural nhiều lớp, lan truyền ngược tự cài đặt.",
     ),
     ModelSpec(
         "logistic",
         "Logistic Regression",
         ("logistic_regression.joblib",),
-        "Bộ phân loại tuyến tính đa lớp, triển khai bằng NumPy.",
+        "Bộ phân loại tuyến tính đa lớp bằng NumPy.",
     ),
     ModelSpec(
         "naive_bayes",
         "Naive Bayes",
         ("naive_bayes.joblib",),
-        "Gaussian Naive Bayes, triển khai bằng NumPy.",
+        "Gaussian Naive Bayes bằng NumPy.",
     ),
     ModelSpec(
         "random_forest",
         "Random Forest",
         ("ensemble_v1/rf_part.joblib",),
-        "Thành viên Random Forest đã huấn luyện của ensemble.",
+        "Mô hình Random Forest thành viên của ensemble.",
     ),
     ModelSpec(
         "knn",
         "K-Nearest Neighbors",
         ("ensemble_v1/knn_part.joblib",),
-        "Thành viên KNN đã huấn luyện của ensemble.",
+        "Mô hình KNN thành viên của ensemble.",
     ),
     ModelSpec(
         "ensemble",
-        "Ensemble · MLP + RF + KNN",
+        "Ensemble",
         (
             "ensemble_v1/mlp_part.pth",
             "ensemble_v1/rf_part.joblib",
             "ensemble_v1/knn_part.joblib",
             "ensemble_v1/config.json",
         ),
-        "Soft voting theo trọng số trong config.json.",
+        "Soft voting có trọng số: MLP + Random Forest + KNN.",
     ),
 )
 
 MODELS = {spec.key: spec for spec in MODEL_SPECS}
 
 
-def model_revision(
-    spec: ModelSpec,
-) -> tuple[tuple[int, int], ...]:
-    """Kiểm tra artifact và tạo khóa cache theo phiên bản file."""
+def model_revision(spec: ModelSpec) -> tuple:
+    """Kiểm tra trọng số và tạo phiên bản cho cache."""
     revision = []
 
     for filename in spec.files:
@@ -94,8 +96,7 @@ def model_revision(
         with path.open("rb") as artifact:
             if artifact.read(80).startswith(b"version https://git-lfs"):
                 raise ValueError(
-                    f"models/{filename} là con trỏ Git LFS. "
-                    "Hãy chạy git lfs pull tại thư mục gốc dự án."
+                    f"models/{filename} chưa được tải. Chạy git lfs pull."
                 )
 
         stat = path.stat()
@@ -103,35 +104,44 @@ def model_revision(
 
     return tuple(revision)
 
-def load_mlp(path: Path) -> MLP:
-    """Restore MLP architecture and trained weights."""
 
+def load_cnn(path: Path) -> CNN:
+    """Khởi tạo đúng kiến trúc theo trọng số CNN đã lưu."""
     checkpoint = torch.load(
         path,
         map_location="cpu",
-        weights_only=True
+        weights_only=True,
     )
+    state = checkpoint.get("model_state_dict", checkpoint)
 
-    # Chỉ lấy tham số dùng để khởi tạo kiến trúc MLP
+    # Hai checkpoint hiện tại đều dùng c1=32, c2=64.
+    # Đọc từ trọng số để tránh dùng CNN() mặc định 16/32.
+    c1 = int(state["layers.0.weight"].shape[0])
+    c2 = int(state["layers.3.weight"].shape[0])
+
+    model = CNN(c1=c1, c2=c2)
+    model.load_state_dict(state, strict=True)
+    model.eval()
+
+    return model
+
+
+def load_mlp(path: Path) -> MLP:
+    checkpoint = torch.load(
+        path,
+        map_location="cpu",
+        weights_only=True,
+    )
     config = checkpoint["config"]
 
-    model_config = {
-        "sizes": config["sizes"],
-        "p_drop": config["p_drop"],
-        "activation": config["activation"],
-        "init": config["init"],
-        "seed": config["seed"],
-    }
-
-    # Recreate architecture
-    model = MLP(**model_config)
-
-    # Restore trained weights
+    model = MLP(**{
+        key: config[key]
+        for key in ("sizes", "p_drop", "activation", "init", "seed")
+    })
     model.model.load_state_dict(
         checkpoint["model_state_dict"],
-        strict=True
+        strict=True,
     )
-
     model.model.eval()
 
     return model
@@ -141,7 +151,7 @@ def class_probabilities(
     model: object,
     features: np.ndarray,
 ) -> np.ndarray:
-    """Sắp xếp các cột xác suất theo nhãn chữ số 0 đến 9."""
+    """Sắp xếp xác suất theo đúng nhãn 0 đến 9."""
     values = np.asarray(
         model.predict_proba(features),
         dtype=np.float64,
@@ -165,44 +175,32 @@ def class_probabilities(
 
 @dataclass
 class SoftVotingModel:
-    """Kết hợp ba mô hình thành viên đã train bằng soft voting."""
-
     mlp: MLP
     random_forest: object
     knn: object
     weights: np.ndarray
 
     def predict_proba(self, features: np.ndarray) -> np.ndarray:
-        """Tính trung bình xác suất theo trọng số đã lưu."""
-        probabilities = [
+        values = [
             self.mlp.predict_proba(features).cpu().numpy(),
             class_probabilities(self.random_forest, features),
             class_probabilities(self.knn, features),
         ]
-
         return np.average(
-            probabilities,
+            values,
             axis=0,
             weights=self.weights,
         )
 
 
 def load_model(key: str) -> object:
-    """Nạp các artifact đã biết trong models/ của dự án."""
     spec = MODELS[key]
     model_revision(spec)
+
     path = MODELS_DIR / spec.files[0]
 
-    if key == "cnn":
-        model = CNN()
-        state = torch.load(
-            path,
-            map_location="cpu",
-            weights_only=True,
-        )
-        model.load_state_dict(state)
-        model.eval()
-        return model
+    if key in {"cnn", "cnn_rotated"}:
+        return load_cnn(path)
 
     if key == "mlp":
         return load_mlp(path)
@@ -212,10 +210,7 @@ def load_model(key: str) -> object:
         config = json.loads(
             (directory / "config.json").read_text(encoding="utf-8")
         )
-        weights = np.asarray(
-            config["weights"],
-            dtype=np.float64,
-        )
+        weights = np.asarray(config["weights"], dtype=np.float64)
 
         if (
             weights.shape != (3,)
@@ -224,7 +219,7 @@ def load_model(key: str) -> object:
             or weights.sum() <= 0
         ):
             raise ValueError(
-                "Ensemble cần 3 trọng số không âm và có tổng lớn hơn 0."
+                "Ensemble cần 3 trọng số không âm, tổng lớn hơn 0."
             )
 
         return SoftVotingModel(
@@ -242,12 +237,6 @@ def predict_probabilities(
     model: object,
     pixels: np.ndarray,
 ) -> np.ndarray:
-    """Đưa pixel 0–255 về đúng scale và shape dùng khi train.
-
-    Các mô hình vector dùng scale_flat(mode="raw").
-    CNN dùng transforms.ToTensor().
-    Cả hai đều chỉ chia pixel cho 255.
-    """
     pixels = np.asarray(pixels, dtype=np.float32)
 
     if pixels.shape != (28, 28) or not np.isfinite(pixels).all():
@@ -259,9 +248,7 @@ def predict_probabilities(
     features = (pixels / 255.0).reshape(1, 784)
 
     if isinstance(model, CNN):
-        tensor = torch.from_numpy(
-            features.reshape(1, 1, 28, 28)
-        )
+        tensor = torch.from_numpy(features.reshape(1, 1, 28, 28))
         values = model(tensor).softmax(dim=1).cpu().numpy()
 
     elif isinstance(model, MLP):
@@ -288,31 +275,32 @@ def prepare_image(
     background: str = "auto",
     preserve_layout: bool = False,
 ) -> Image.Image:
-    """Chuẩn bị ảnh MNIST, giữ tỷ lệ nét và căn tâm theo cường độ.
-
-    Ảnh vẽ được cắt vào khung tối đa 20 x 20, sau đó đặt lên
-    nền 28 x 28. Ảnh mẫu MNIST được giữ nguyên bố cục.
-    """
+    """Đưa ảnh về MNIST: nét sáng, nền đen, kích thước 28 × 28."""
     if background not in {"auto", "light", "dark"}:
         raise ValueError("Kiểu nền không hợp lệ.")
 
     image = ImageOps.exif_transpose(image).convert("RGBA")
     image.thumbnail((2048, 2048))
 
-    color = "black" if background == "dark" else "white"
-    layer = Image.new("RGBA", image.size, color)
+    layer = Image.new(
+        "RGBA",
+        image.size,
+        "black" if background == "dark" else "white",
+    )
     gray = Image.alpha_composite(layer, image).convert("L")
     pixels = np.asarray(gray, dtype=np.float32)
 
-    border = np.concatenate(
-        (pixels[0], pixels[-1], pixels[:, 0], pixels[:, -1])
-    )
-
-    light_background = background == "light" or (
+    border = np.concatenate((
+        pixels[0],
+        pixels[-1],
+        pixels[:, 0],
+        pixels[:, -1],
+    ))
+    light = background == "light" or (
         background == "auto" and np.median(border) > 127
     )
 
-    if light_background:
+    if light:
         pixels = 255.0 - pixels
 
     if float(np.ptp(pixels)) < 15:
@@ -327,37 +315,29 @@ def prepare_image(
             )
         return Image.fromarray(pixels.astype(np.uint8))
 
-    # Loại mức sáng nền và nhiễu mờ.
     border_level = (
         255 - np.median(border)
-        if light_background
+        if light
         else np.median(border)
     )
     pixels = np.clip(pixels - border_level, 0, 255)
     foreground = pixels > max(20, float(pixels.max()) * 0.15)
 
     if np.count_nonzero(foreground) < 4:
-        raise ValueError(
-            "Nét viết quá nhỏ. Hãy vẽ lớn hơn."
-        )
+        raise ValueError("Nét viết quá nhỏ. Hãy vẽ lớn hơn.")
 
     rows, columns = np.where(foreground)
     pixels[~foreground] = 0
 
-    crop = Image.fromarray(pixels.astype(np.uint8)).crop(
-        (
-            int(columns.min()),
-            int(rows.min()),
-            int(columns.max()) + 1,
-            int(rows.max()) + 1,
-        )
-    )
+    crop = Image.fromarray(pixels.astype(np.uint8)).crop((
+        int(columns.min()),
+        int(rows.min()),
+        int(columns.max()) + 1,
+        int(rows.max()) + 1,
+    ))
 
     scale = 20 / max(crop.size)
-    size = tuple(
-        max(1, round(side * scale))
-        for side in crop.size
-    )
+    size = tuple(max(1, round(side * scale)) for side in crop.size)
     crop = crop.resize(size, Image.Resampling.LANCZOS)
 
     centered = Image.new("L", (28, 28))
@@ -368,13 +348,12 @@ def prepare_image(
 
     pixels = np.asarray(centered, dtype=np.float32)
     grid_y, grid_x = np.indices(pixels.shape)
-    mass = pixels.sum()
 
     offset_x = round(
-        13.5 - float((grid_x * pixels).sum() / mass)
+        13.5 - float((grid_x * pixels).sum() / pixels.sum())
     )
     offset_y = round(
-        13.5 - float((grid_y * pixels).sum() / mass)
+        13.5 - float((grid_y * pixels).sum() / pixels.sum())
     )
 
     result = Image.new("L", (28, 28))
