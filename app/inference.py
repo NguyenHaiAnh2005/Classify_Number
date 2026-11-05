@@ -35,7 +35,7 @@ MODEL_SPECS = (
         "cnn_rotated",
         "CNN Rotated",
         ("mnist_cnn_rotated.pth",),
-        "CNN học từ ảnh tăng cường bằng phép xoay ngẫu nhiên ±15°.",
+        "CNN học từ ảnh tăng cường bằng phép xoay ngẫu nhiên ±30°.",
     ),
     ModelSpec(
         "mlp",
