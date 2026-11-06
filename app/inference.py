@@ -14,7 +14,10 @@ from src.models.mlp import MLP
 
 ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = ROOT / "models"
-
+# Thống kê của tập train 54.000 ảnh:
+# split phân tầng, val_size=0.1, seed=42.
+TRAIN_MEAN = 0.13073687891823396
+TRAIN_STD = 0.3081904023322827
 
 @dataclass(frozen=True)
 class ModelSpec:
@@ -245,17 +248,26 @@ def predict_probabilities(
     if pixels.min() < 0 or pixels.max() > 255:
         raise ValueError("Pixel phải nằm trong khoảng 0–255.")
 
-    features = (pixels / 255.0).reshape(1, 784)
+    unit_pixels = pixels / 255.0
 
     if isinstance(model, CNN):
-        tensor = torch.from_numpy(features.reshape(1, 1, 28, 28))
+        # CNN và CNN Rotated: chỉ chia 255.
+        tensor = torch.from_numpy(
+            unit_pixels.reshape(1, 1, 28, 28)
+        )
         values = model(tensor).softmax(dim=1).cpu().numpy()
 
-    elif isinstance(model, MLP):
-        values = model.predict_proba(features).cpu().numpy()
-
     else:
-        values = class_probabilities(model, features)
+        # MLP, LR, GNB, RF, KNN và Ensemble:
+        # chuẩn hóa bằng thống kê của tập train.
+        features = (
+            (unit_pixels - TRAIN_MEAN) / TRAIN_STD
+        ).reshape(1, 784).astype(np.float32)
+
+        if isinstance(model, MLP):
+            values = model.predict_proba(features).cpu().numpy()
+        else:
+            values = class_probabilities(model, features)
 
     probabilities = np.asarray(values[0], dtype=np.float64)
 
