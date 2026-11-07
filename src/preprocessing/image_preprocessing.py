@@ -8,9 +8,6 @@ import numpy as np
 from PIL import Image, ImageOps
 
 
-
-
-
 def remove_duplicates(X, y):
     """
     Bỏ các ảnh trùng lặp hoàn toàn (giống nhau từng pixel), giữ lại bản đầu tiên.
