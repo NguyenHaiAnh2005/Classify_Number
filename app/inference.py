@@ -118,7 +118,6 @@ def load_cnn(path: Path) -> CNN:
     state = checkpoint.get("model_state_dict", checkpoint)
 
     # Hai checkpoint hiện tại đều dùng c1=32, c2=64.
-    # Đọc từ trọng số để tránh dùng CNN() mặc định 16/32.
     c1 = int(state["layers.0.weight"].shape[0])
     c2 = int(state["layers.3.weight"].shape[0])
 
