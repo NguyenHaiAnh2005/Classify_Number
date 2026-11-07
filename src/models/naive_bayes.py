@@ -7,7 +7,7 @@ DEFAULT_VAR_SMOOTHING_GRID = (1e-9, 1e-6, 1e-4, 1e-3, 1e-2, 1e-1)
 
 class GaussianNaiveBayes:
 
-    def __init__(self, var_smoothing=1e-9, batch_size=512):
+    def __init__(self, var_smoothing=1e-9, batch_size=128):
         self.var_smoothing = var_smoothing
         self.batch_size = batch_size
 
@@ -98,7 +98,7 @@ class GaussianNaiveBayes:
 # ----------------------------------------------------------------------
 # Giao dien chung cho cac file trong models/
 # ----------------------------------------------------------------------
-def build_model(var_smoothing=1e-9, batch_size=2000):
+def build_model(var_smoothing=1e-9, batch_size=128):
     """Tao model chua huan luyen."""
     return GaussianNaiveBayes(var_smoothing=var_smoothing, batch_size=batch_size)
 
