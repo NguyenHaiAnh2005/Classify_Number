@@ -471,11 +471,19 @@ def main() -> None:
             [2, 1],
             vertical_alignment="bottom",
         )
-
+        
         with selector:
+            model_options = list(revisions)
+
+            # Đưa CNN Rotated lên đầu nếu có trọng số hợp lệ.
+            if "cnn_rotated" in model_options:
+                model_options.remove("cnn_rotated")
+                model_options.insert(0, "cnn_rotated")
+
             selected = st.selectbox(
                 "Mô hình nhận dạng",
-                list(revisions),
+                model_options,
+                index=0,
                 format_func=lambda key: MODELS[key].name,
             )
 
